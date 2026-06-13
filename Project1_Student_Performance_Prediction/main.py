@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
+import matplotlib.pyplot as plt
 
 data = pd.read_csv("dataset.csv")
 
@@ -29,3 +30,9 @@ study_hours = float(input("Enter Study Hours per Day: "))
 result = model.predict([[attendance, marks, study_hours]])
 
 print("\nPredicted Final Score:", round(result[0], 2))
+
+plt.scatter(data["marks"], data["final_score"])
+plt.xlabel("Marks")
+plt.ylabel("Final Score")
+plt.title("Student Performance Analysis")
+plt.show()
