@@ -12,7 +12,6 @@ data.info()
 print("\nMissing Values:")
 print(data.isnull().sum())
 
-# Remove missing values if any
 data = data.dropna()
 
 print("\nDataset Statistics:")
@@ -39,6 +38,12 @@ print("Model Accuracy:", round(accuracy, 2))
 attendance = float(input("Enter Attendance (%): "))
 marks = float(input("Enter Marks: "))
 study_hours = float(input("Enter Study Hours per Day: "))
+
+input_data = pd.DataFrame({
+    "attendance": [attendance],
+    "marks": [marks],
+    "study_hours": [study_hours]
+})
 
 result = model.predict([[attendance, marks, study_hours]])
 
