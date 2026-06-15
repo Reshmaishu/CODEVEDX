@@ -6,6 +6,19 @@ import matplotlib.pyplot as plt
 
 data = pd.read_csv("dataset.csv")
 
+print("\nDataset Information:")
+data.info()
+
+print("\nMissing Values:")
+print(data.isnull().sum())
+
+# Remove missing values if any
+data = data.dropna()
+
+print("\nDataset Statistics:")
+print(data.describe())
+
+
 X = data[["attendance", "marks", "study_hours"]]
 y = data["final_score"]
 
