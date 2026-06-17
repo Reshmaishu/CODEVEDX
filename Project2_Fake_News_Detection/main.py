@@ -8,17 +8,16 @@ from nltk.corpus import stopwords
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix
+)
 
-# Download stopwords
 nltk.download('stopwords')
 
-# Load dataset
-data = pd.read_csv("dataset.csv")
 
-# ==========================
-# EDA SECTION
-# ==========================
+data = pd.read_csv("dataset.csv")
 
 print("\n========== DATASET INFORMATION ==========")
 data.info()
@@ -26,27 +25,29 @@ data.info()
 print("\n========== MISSING VALUES ==========")
 print(data.isnull().sum())
 
-# Remove missing values
-data = data.dropna()
-
-print("\n========== DATASET STATISTICS ==========")
-print(data.describe(include='all'))
+data.dropna(inplace=True)
 
 print("\n========== LABEL DISTRIBUTION ==========")
 print(data["label"].value_counts())
 
-# Text length analysis
+
 data["text_length"] = data["text"].apply(len)
 
 print("\nAverage News Length:")
 print(round(data["text_length"].mean(), 2))
 
-# ==========================
-# TEXT PREPROCESSING
-# ==========================
+plt.figure(figsize=(6,4))
+data["label"].value_counts().plot(kind="bar")
+plt.title("Fake vs Real News Distribution")
+plt.xlabel("News Type")
+plt.ylabel("Count")
+plt.show()
+
+
+stop_words = set(stopwords.words('english'))
 
 def preprocess_text(text):
-    text = text.lower()
+    text = str(text).lower()
 
     text = "".join(
         char for char in text
@@ -55,8 +56,6 @@ def preprocess_text(text):
 
     words = text.split()
 
-    stop_words = set(stopwords.words('english'))
-
     words = [
         word for word in words
         if word not in stop_words
@@ -64,114 +63,132 @@ def preprocess_text(text):
 
     return " ".join(words)
 
-# Apply preprocessing
 data["clean_text"] = data["text"].apply(preprocess_text)
 
-# ==========================
-# FEATURE SELECTION
-# ==========================
+
 
 X = data["clean_text"]
 y = data["label"]
 
-# ==========================
-# TF-IDF VECTORIZATION
-# ==========================
 
-vectorizer = TfidfVectorizer()
+vectorizer = TfidfVectorizer(
+    max_features=5000,
+    ngram_range=(1, 2)
+)
 
 X = vectorizer.fit_transform(X)
 
 print("\n========== SAMPLE TF-IDF WORDS ==========")
 print(vectorizer.get_feature_names_out()[:20])
 
-# ==========================
-# TRAIN TEST SPLIT
-# ==========================
+
 
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
     test_size=0.2,
-    random_state=42
+    random_state=42,
+    stratify=y
 )
 
-# ==========================
-# MODEL TRAINING
-# ==========================
 
-model = LogisticRegression()
+
+
+model = LogisticRegression(
+    max_iter=1000
+)
 
 model.fit(X_train, y_train)
 
-# ==========================
-# MODEL EVALUATION
-# ==========================
 
 predictions = model.predict(X_test)
 
-accuracy = accuracy_score(y_test, predictions)
+accuracy = accuracy_score(
+    y_test,
+    predictions
+)
 
 print("\n========== MODEL RESULTS ==========")
-print("Model Accuracy:", round(accuracy * 100, 2), "%")
+print("Accuracy:", round(accuracy * 100, 2), "%")
 
 print("\nClassification Report:")
-print(classification_report(y_test, predictions))
+print(classification_report(
+    y_test,
+    predictions
+))
 
-# ==========================
-# MODEL STORAGE
-# ==========================
+print("\nConfusion Matrix:")
+print(confusion_matrix(
+    y_test,
+    predictions
+))
 
-pickle.dump(model, open("model.pkl", "wb"))
-pickle.dump(vectorizer, open("vectorizer.pkl", "wb"))
+
+
+pickle.dump(
+    model,
+    open("model.pkl", "wb")
+)
+
+pickle.dump(
+    vectorizer,
+    open("vectorizer.pkl", "wb")
+)
 
 print("\nModel saved successfully!")
 print("Files created:")
 print("1. model.pkl")
 print("2. vectorizer.pkl")
 
-# ==========================
-# VISUALIZATION
-# ==========================
 
-data["label"].value_counts().plot(kind="bar")
 
-plt.title("Fake vs Real News Distribution")
-plt.xlabel("News Type")
-plt.ylabel("Count")
+print("\n========== FAKE NEWS DETECTOR ==========")
 
-plt.show()
+while True:
 
-# ==========================
-# USER INPUT PREDICTION
-# ==========================
+    news = input(
+        "\nEnter News Text (or type EXIT):\n"
+    )
 
-print("\n========== NEWS CLASSIFICATION ==========")
+    if news.upper() == "EXIT":
+        break
 
-news = input("\nEnter News Text:\n")
+    news_clean = preprocess_text(news)
 
-news_clean = preprocess_text(news)
+    news_vector = vectorizer.transform(
+        [news_clean]
+    )
 
-news_vector = vectorizer.transform([news_clean])
+    prediction = model.predict(
+        news_vector
+    )[0]
 
-prediction = model.predict(news_vector)[0]
+    confidence = max(
+        model.predict_proba(
+            news_vector
+        )[0]
+    ) * 100
 
-confidence = max(
-    model.predict_proba(news_vector)[0]
-) * 100
+    print("\n==============================")
+    print("PREDICTION RESULT")
+    print("==============================")
+    print("News Type :", prediction)
+    print(
+        "Confidence:",
+        round(confidence, 2),
+        "%"
+    )
+    print("==============================")
 
-print("\n==============================")
-print("PREDICTION RESULT")
-print("==============================")
-print("News Type:", prediction)
-print("Confidence Score:", round(confidence, 2), "%")
-print("==============================")
 
-# ==========================
-# TEST MODEL LOADING
-# ==========================
+loaded_model = pickle.load(
+    open("model.pkl", "rb")
+)
 
-loaded_model = pickle.load(open("model.pkl", "rb"))
-loaded_vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
+loaded_vectorizer = pickle.load(
+    open("vectorizer.pkl", "rb")
+)
 
-print("\nSaved model loaded successfully!")
+print(
+    "\nSaved model loaded successfully!"
+)
